@@ -1,34 +1,37 @@
 ﻿using ExamenDePOO.Dtos.Inventario;
 using ExamenDePOO.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Threading.Tasks;
 
 namespace ExamenDePOO.Controllers
 {
     [ApiController]
-    [Route("api/categories")]
+    [Route("api/inventario")]
     public class InventarioController : ControllerBase
     {
-        private readonly IInventarioServices _inventarioservices;
+        private readonly IInventarioServices _inventarioServices;
 
-        public InventarioController(IInventarioServices categoriesService)
+        public InventarioController(IInventarioServices inventarioServices)
         {
-            this._inventarioservices = categoriesService;
+            this._inventarioServices = inventarioServices;
         }
 
         [HttpGet]
         public async Task<ActionResult> GetAll()
         {
-            return Ok(await _inventarioservices.GetInventario(id);
+            var inventario = await _inventarioServices.GetAllInventariosAsync();
+            return Ok(inventario);
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult> Get(Guid id)
         {
-            var inventario = await _inventarioservices.GetInventarioByIdAsync(id);
+            var inventario = await _inventarioServices.GetInventarioByIdAsync(id);
 
             if (inventario == null)
             {
-                return NotFound(new { Message = $"No se encontro el producto: {id}" });
+                return NotFound(new { Message = $"No se encontró el producto con ID: {id}" });
             }
 
             return Ok(inventario);
@@ -37,15 +40,14 @@ namespace ExamenDePOO.Controllers
         [HttpPost]
         public async Task<ActionResult> Create(InventarioCreateDto dto)
         {
-            await _inventarioservices.CreateAsync(dto);
-
+            await _inventarioServices.CreateAsync(dto);
             return StatusCode(201);
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult> Edit(Inventario dto, Guid id)
+        public async Task<ActionResult> Edit( InventarioDto dto, Guid id)
         {
-            var result = await _inventarioservices.EditAsync(dto, id);
+            var result = await _inventarioServices.EditAsync(dto, id);
 
             if (!result)
             {
@@ -58,17 +60,15 @@ namespace ExamenDePOO.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(Guid id)
         {
-            var category = await _inventarioservices.GetInventarioByIdAsync(id);
+            var inventario = await _inventarioServices.GetInventarioByIdAsync(id);
 
-            if (category is null)
+            if (inventario == null)
             {
                 return NotFound();
             }
 
-            await _inventarioservices.DeleteAsync(id);
-
+            await _inventarioServices.DeleteAsync(id);
             return Ok();
-
         }
     }
-    }
+}

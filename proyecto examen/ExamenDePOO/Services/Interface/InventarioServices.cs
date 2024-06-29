@@ -1,139 +1,100 @@
-﻿using ExamenDePOO.DataBase.Entities;
-using static ExamenDePOO.Services.Interface.IInventarioServices;
-using System.Xml;
-using ExamenDePOO.Dtos.Inventario;
-using ExamenDePOO.Controllers;
+﻿using ExamenDePOO.Dtos.Inventario;
+using ExamenDePOO.DataBase.Entities;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ExamenDePOO.Services.Interface
 {
     public class InventarioServices :  IInventarioServices
-    { 
-            public readonly string _JSON_FILE;
+    {
+        private readonly string _JSON_FILE;
 
-            public InventarioServices()
-            {
-                _JSON_FILE = "SeedData/inventario.json";
-            }
-
-            public async Task<List<InventarioDto>> GetInventarioDtosAsync()
-            {
-                return await ReadCategoriesFromFileAsync();
-            }
-            public async Task<InventarioDto> GetInventarioById(Guid id)
-            {
-                var inventario = await ReadCategoriesFromFileAsync();
-                InventarioDto category = inventarios.FirstOrDefault(c => c.Id == id);
-                return category;
-            }
-            public async Task<bool> CreateAsync(InventarioCreateDto dto)
-            {
-                var inventarioDto = await ReadCategoriesFromFileAsync();
-
-            var  inventario = new InventarioDto
-                {
-                    Id = Guid.NewGuid(),
-                    Name = dto.Name,
-                    Description = dto.Description,
-                };
-
-                inventarioDto.Add(inventario);
-
-                var inventarios =  inventarioDto.Select(x => new Cliente
-                {
-                    Id = x.Id,
-                    Name = x.Name,
-                    Description = x.Description,
-                }).ToList();
-
-                return true;
-            }
-            public async Task<bool> EditAsync(INventarioEditDto dto, Guid id)
-            {
-                var inventarioDto = await ReadCategoriesFromFileAsync();
-
-                var existingInventario = inventarioDto
-                    .FirstOrDefault(category => category.Id == id);
-                if (existingInventario is null)
-                {
-                    return false;
-                }
-
-                for (int i = 0; i < inventarioDto.Count; i++)
-                {
-                    if (inventarioDto[i].Id == id)
-                    {
-                        inventarioDto[i].Name = dto.Name;
-                        inventarioDto[i].Description = dto.Description;
-                    }
-                }
-
-                var inventario = inventarioDto.Select(x => new Cliente
-                {
-                    Id = x.Id,
-                    Name = x.Name,
-                    Description = x.Description,
-                }).ToList();
-
-                 
-                return true;
-            }
-            public async Task<bool> DeleteAsync(Guid id)
-            {
-                var inventarioDto = await ReadCategoriesFromFileAsync();
-                var InventarioTodelet = inventarioDto.FirstOrDefault(x => x.Id == id);
-
-                if (InventarioTodelet is null)
-                {
-                    return false;
-                }
-
-                inventarioDto.Remove(InventarioTodelet);
-
-                var inventarios = inventarioDto.Select(x => new Cliente
-                {
-                    Id = x.Id,
-                    Name = x.Name,
-                    Description = x.Description,
-                }).ToList();
-
-                
-
-                return true;
-            }
-
-            private async Task<List<InventarioDto>> ReadCategoriesFromFileAsync()
-            {
-                if (!File.Exists(_JSON_FILE))
-                {
-                    return new List<InventarioDto>();
-                }
-
-                var json = await File.ReadAllTextAsync(_JSON_FILE);
-
-               // var categories = JsonConvert.DeserializeObject<List<Cliente>>(json);
-
-                var dtos = inventarios.Select(x => new InventarioDto
-                {
-                    Id = x.Id,
-                    Name = x.Name,
-                    Description = x.Description,
-                }).ToList();
-
-                return dtos;
-            }
-
-            private async Task WriteCategoriesToFileAsync(List<Cliente> inventario)
-            {
-               
-
-                if (File.Exists(_JSON_FILE))
-                {
-                    await File.WriteAllTextAsync(_JSON_FILE, json);
-                }
-
-            }
-
-
-
+        public InventarioServices()
+        {
+            _JSON_FILE = "SeedData/inventario.json";
         }
+
+        public async Task<List<InventarioDto>> GetInventarioListAsync()
+        {
+            return await ReadInventarioFromFileAsync();
+        }
+
+        public async Task<bool> CreateAsync(InventarioCreateDto dto)
+        {
+            var inventarioDto = await ReadInventarioFromFileAsync();
+
+            var nuevoInventario = new InventarioDto
+            {
+                Id = Guid.NewGuid(),
+                Nombre = dto.Nombre,
+                Descripcion = dto.Descripcion,
+                Precio = dto.Precio
+            };
+
+            inventarioDto.Add(nuevoInventario);
+
+            await WriteInventarioToFileAsync(inventarioDto);
+
+            return true;
+        }
+
+        public async Task<bool> EditAsync(Guid id, InventarioDto  dto)
+        {
+            var inventarioDto = await ReadInventarioFromFileAsync();
+
+            var inventarioExistente = inventarioDto.FirstOrDefault(p => p.Id == id);
+            if (inventarioExistente == null)
+            {
+                return false;  
+            }
+
+            inventarioExistente.Nombre = dto.Nombre;
+            inventarioExistente.Descripcion = dto.Descripcion;
+            inventarioExistente.Precio = dto.Precio;
+
+            await WriteInventarioToFileAsync(inventarioDto);
+
+            return true;
+        }
+
+        public async Task<bool> DeleteAsync(Guid id)
+        {
+            var inventarioDto = await ReadInventarioFromFileAsync();
+
+            var inventarioParaEliminar = inventarioDto.FirstOrDefault(p => p.Id == id);
+            if (inventarioParaEliminar == null)
+            {
+                return false; 
+            }
+
+            inventarioDto.Remove(inventarioParaEliminar);
+
+            await WriteInventarioToFileAsync(inventarioDto);
+
+            return true;
+        }
+
+        private async Task<List<InventarioDto>> ReadInventarioFromFileAsync()
+        {
+            if (!File.Exists(_JSON_FILE))
+            {
+                return new List<InventarioDto>();
+            }
+
+            var json = await File.ReadAllTextAsync(_JSON_FILE);
+            var inventarioDto = JsonConvert.DeserializeObject<List<InventarioDto>>(json);
+
+            return inventarioDto ?? new List<InventarioDto>();
+        }
+
+        private async Task WriteInventarioToFileAsync(List<InventarioDto> inventarioDto)
+        {
+            var json = JsonConvert.SerializeObject(inventarioDto, Formatting.Indented);
+            await File.WriteAllTextAsync(_JSON_FILE, json);
+        }
+    }
 }
